@@ -9,22 +9,22 @@ const bleed_url = process.env.COBALT_URL;
 @ApplyOptions<Listener.Options>({ once: false })
 export class MessageCreate extends Listener {
 	public override async run(message: Message) {
-        //const innertube = await Innertube.create()
+		//const innertube = await Innertube.create()
 		if (!message.channel.isSendable()) return;
 		if (message.author.bot) return;
 
 		if (message.content.toLowerCase().startsWith(process.env.BLEED_PREFIX + ' ')) {
-			const args = message.content.slice(3).trim().split(/ +/);
+			const args = message.content.slice(5).trim().split(/ +/);
 			const link = args[0];
-			if (!link) return message.channel.send('invalid link');
-			if (!link.startsWith('https://')) return message.channel.send('invalid link');
-
+			console.log(link);
+			if (!link) return message.channel.send('invalid link (1)');
+			if (!link.includes('https://')) return message.channel.send('invalid link (2)');
 
 			message.channel.sendTyping();
 
-            if (link.includes('youtube')) {
-                return message.channel.send('youtube links are not supported');
-            }
+			if (link.includes('youtube')) {
+				return message.channel.send('youtube links are not supported');
+			}
 
 			const res = await fetch(`${bleed_url}`, {
 				method: 'POST',
@@ -36,7 +36,7 @@ export class MessageCreate extends Listener {
 			});
 
 			const data = await res.json();
-			console.log(data); 
+			console.log(data);
 			if (data.error) return message.channel.send('`' + data.error.code + '`');
 
 			if (data.status == 'redirect' || data.status == 'tunnel') {
@@ -46,6 +46,8 @@ export class MessageCreate extends Listener {
 				const buffer = await res.buffer();
 
 				const embed = new EmbedBuilder().setDescription(`[Click here to download](${video_url})`).setFooter({ text: data.filename });
+
+				await message.delete().catch(() => null);
 
 				message.channel.send({
 					files: [
